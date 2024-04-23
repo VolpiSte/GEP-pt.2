@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/javascript-lp-solver/prod/solver.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <title>Calcolatrice programmazione lineare</title>
+</head>
+<body class="bg-gray-100 text-black font-sans leading-normal tracking-normal mt-12">
+    <div class="flex items-center justify-center min-h-screen">
+        <div class="max-w-xl w-full">
+            <div class="bg-gray-300 rounded-lg p-5 shadow-lg shadow-indigo-500/40">
+                <h2 class="text-xl text-center font-bold pb-4">Calcolatrice programmazione lineare</h2>
+                <div class="mb-4">
+                    <label for="function" class="block text-sm font-bold mb-2">Funzione del tipo (z = ax + by):</label>
+                    <input type="text" id="function" name="function" class="shadow appearance-none border rounded w-full py-2 px-3 bg-white-700 text-black leading-tight focus:outline-none focus:shadow-outline" placeholder="Inserisci funzione" value="20 x + 12.5 y">
+                </div>
+                
+            <!-- Cose in più
+                <div class="grid grid-cols-4 gap-4 mb-4">
+                    <button onclick="insertSymbol('sqrt()')" class="bg-blue-500 hover:bg-blue-700 text-black font-bold py-2 px-4 rounded">sqrt()</button>
+                    <button onclick="insertSymbol('ln()')" class="bg-blue-500 hover:bg-blue-700 text-black font-bold py-2 px-4 rounded">ln()</button>
+                    <button onclick="insertSymbol('log()')" class="bg-blue-500 hover:bg-blue-700 text-black font-bold py-2 px-4 rounded">log()</button>
+                    <button onclick="insertSymbol('^')" class="bg-blue-500 hover:bg-blue-700 text-black font-bold py-2 px-4 rounded">x^n</button>
+                </div>
+            -->
+                <div class="mb-4">
+                    <label for="constraints" class="block text-sm font-bold mb-2">Vincoli:</label>
+                    <textarea id="constraints" name="constraints" rows="5" class="shadow appearance-none border rounded w-full py-2 px-3 bg-white-700 text-black leading-tight focus:outline-none focus:shadow-outline" placeholder="Inserisci i tuoi vincoli, uno per riga">0.72 x + 0.23 y <= 13
+2 x + 0.2 y <= 31
+12 x + 3 y <= 230
+0.33 x + 0.28 y <= 10</textarea>
+                </div>
+                <button onclick="risolviProblema()" class="bg-white-500 hover:bg-white-700 text-black font-bold py-2 px-4 rounded">Risolvi Problema</button>
+            </div>
+        </div>
+    </div>
+    <!-- Graph container -->
+    <div class="flex items-center justify-center">
+        <div class="max-w-6xl w-full my-8"> <!-- Adjusted max width -->
+            <canvas id="lpGraph"></canvas>
+        </div>
+    </div>    
+    <script>
+        function insertSymbol(symbol) {
+            let functionInput = document.getElementById('function');
+            insertAtCursor(functionInput, symbol);
+        }
+
+        function insertAtCursor(field, symbol) {
+            let startPos = field.selectionStart;
+            let endPos = field.selectionEnd;
+            field.value = field.value.substring(0, startPos) + symbol + field.value.substring(endPos, field.value.length);
+            field.focus();
+            field.selectionStart = startPos + symbol.length;
+            field.selectionEnd = startPos + symbol.length;
+        }
+
+        function risolviProblema() {
+            var model = {
+                optimize: "profit",
+                opType: "max",
+                constraints: {},
+                variables: {},
+                ints: {}
+            };
+
+            var funzione = document.getElementById("function").value;
+            var vincoli = document.getElementById("constraints").value.split("\n");
+
+            funzione.match(/[+\-]?\d*\.?\d+\s*[a-z]+/gi).forEach(term => {
+                let [_, coeff, name] = term.match(/([+\-]?\d*\.?\d+)\s*([a-z]+)/i);
+                model.variables[name] = {profit: parseFloat(coeff)};
+            });
+
+            vincoli.forEach((vincolo, index) => {
+                let [lhs, rhs] = vincolo.split("<=");
+                rhs = parseFloat(rhs);
+                let constraintName = "constraint" + index;
+                model.constraints[constraintName] = {"max": rhs};
+                lhs.match(/[+\-]?\d*\.?\d+\s*[a-z]+/gi).forEach(term => {
+                    let [_, coeff, name] = term.match(/([+\-]?\d*\.?\d+)\s*([a-z]+)/i);
+                    if (!model.variables[name]) model.variables[name] = {};
+                    model.variables[name][constraintName] = parseFloat(coeff);
+                });
+            });
+
+            var solution = solver.Solve(model);
+            //alert("La soluzione è: " + JSON.stringify(solution));
+            updateGraph(model); // Ensure this is called after solving the model
+        }
+
+        var ctx = document.getElementById('lpGraph').getContext('2d');
+        var lpChart = new Chart(ctx, {
+            type: 'scatter',
+            data: {datasets: []},
+            options: {
+                scales: {
+                    x: {type: 'linear', position: 'bottom'},
+                    y: {type: 'linear'}
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+
+        //area con area ammissibile (non completata)
+        
+        function updateGraph(model) {
+    var datasets = [];
+    var feasibleRegionData = []; // Dati per l'area ammissibile
+
+    Object.keys(model.constraints).forEach((key, index) => {
+        var constraint = model.constraints[key];
+        var max = constraint.max;
+
+        var terms = Object.keys(model.variables).reduce((acc, varName) => {
+            acc[varName] = model.variables[varName][key] || 0;
+            return acc;
+        }, {});
+
+        var xCoeff = parseFloat(terms.x);
+        var yCoeff = parseFloat(terms.y);
+
+        var xPoints = [0, max / xCoeff].map(x => x.toFixed(2));
+        var yPoints = [max / yCoeff, 0].map(y => y.toFixed(2));
+
+        datasets.push({
+            label: `${xCoeff}x + ${yCoeff}y <= ${max}`,
+            data: [{ x: xPoints[0], y: yPoints[0] }, { x: xPoints[1], y: yPoints[1] }],
+            borderColor: `rgb(${255 - 60 * index}, ${70 * index}, 100)`,
+            borderWidth: 2,
+            fill: false,
+            showLine: true
+        });
+
+        // Calcolare i punti per l'area ammissibile
+        feasibleRegionData.push({ x: 0, y: 0 }); // Punto di partenza
+        feasibleRegionData.push({ x: 0, y: constraint.max / parseFloat(terms.y) }); // Punto sull'asse y
+        feasibleRegionData.push({ x: constraint.max / parseFloat(terms.x), y: 0 }); // Punto sull'asse x
+    });
+
+    datasets.push({
+        label: "Area ammissibile",
+        data: feasibleRegionData,
+        backgroundColor: "rgba(0, 255, 0, 0.2)", // Colore dell'area ammissibile
+        borderWidth: 0,
+        fill: true, // Riempire l'area
+        showLine: false // Nascondere le linee dell'area
+    });
+
+    lpChart.data.datasets = datasets;
+    lpChart.update();
+}
+
+
+
+////////////////////////////////////////////////////////////////
+// Grafico senza area ammissibile
+        /*
+        function updateGraph(model) {
+    var datasets = [];
+    var bestFunction = null;
+    var bestResult = -Infinity;
+
+    Object.keys(model.constraints).forEach((key, index) => {
+        var constraint = model.constraints[key];
+        var max = constraint.max;
+        var color = `rgb(${255 - 60 * index}, ${70 * index}, 100)`;
+
+        var terms = Object.keys(model.variables).reduce((acc, varName) => {
+            acc[varName] = model.variables[varName][key] || 0;
+            return acc;
+        }, {});
+
+        var xCoeff = parseFloat(terms.x);
+        var yCoeff = parseFloat(terms.y);
+
+        var xPoints = [0, max / xCoeff].map(x => x.toFixed(2));
+        var yPoints = [max / yCoeff, 0].map(y => y.toFixed(2));
+
+        datasets.push({
+            label: `${xCoeff}x + ${yCoeff}y <= ${max}`,
+            data: [{ x: xPoints[0], y: yPoints[0] }, { x: xPoints[1], y: yPoints[1] }],
+            borderColor: color,
+            borderWidth: 2,
+            fill: false,
+            showLine: true
+        });
+
+        // Check if this constraint represents the best function
+        var result = max / Math.max(xCoeff, yCoeff);
+        if (result > bestResult) {
+            bestResult = result;
+            bestFunction = `${xCoeff}x + ${yCoeff}y`;
+        }
+    });
+
+    // Highlight the best function
+    datasets.forEach(dataset => {
+        if (dataset.label === bestFunction) {
+            dataset.borderWidth = 4; // Increase the border width to highlight
+        }
+    });
+
+    lpChart.data.datasets = datasets;
+    lpChart.update();
+}
+*/
+
+    </script>
+</body>
+</html>
