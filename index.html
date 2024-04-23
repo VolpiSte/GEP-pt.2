@@ -5,46 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
     <script src="https://unpkg.com/javascript-lp-solver/prod/solver.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <title>Calcolatrice programmazione lineare</title>
 </head>
-<body class="bg-gray-100 text-black font-sans leading-normal tracking-normal mt-12">
+<body class="bg-gray-300 text-black font-sans leading-normal tracking-normal">
     <div class="flex items-center justify-center min-h-screen">
-        <div class="max-w-xl w-full">
-            <div class="bg-gray-300 rounded-lg p-5 shadow-lg shadow-indigo-500/40">
+        <div class="max-w-2xl w-full">
+            <div class="bg-gray-400 rounded-lg p-5 shadow-lg shadow-indigo-500/40">
                 <h2 class="text-xl text-center font-bold pb-4">Calcolatrice programmazione lineare</h2>
-                <div class="mb-4">
+                <div class="mb-2">
                     <label for="function" class="block text-sm font-bold mb-2">Funzione del tipo (z = ax + by):</label>
-                    <input type="text" id="function" name="function" class="shadow appearance-none border rounded w-full py-2 px-3 bg-white-700 text-black leading-tight focus:outline-none focus:shadow-outline" placeholder="Inserisci funzione" value="z = 20 x + 12.5 y">
+                    <input type="text" id="function" class="shadow appearance-none border rounded w-full py-2 px-3 text-black leading-tight focus:outline-none focus:shadow-outline" placeholder="Inserisci funzione">
                 </div>
-                
-            <!-- Cose in più
-                <div class="grid grid-cols-4 gap-4 mb-4">
-                    <button onclick="insertSymbol('sqrt()')" class="bg-blue-500 hover:bg-blue-700 text-black font-bold py-2 px-4 rounded">sqrt()</button>
-                    <button onclick="insertSymbol('ln()')" class="bg-blue-500 hover:bg-blue-700 text-black font-bold py-2 px-4 rounded">ln()</button>
-                    <button onclick="insertSymbol('log()')" class="bg-blue-500 hover:bg-blue-700 text-black font-bold py-2 px-4 rounded">log()</button>
-                    <button onclick="insertSymbol('^')" class="bg-blue-500 hover:bg-blue-700 text-black font-bold py-2 px-4 rounded">x^n</button>
-                </div>
-            -->
-                <div class="mb-4">
+                <div class="mb-2">
                     <label for="constraints" class="block text-sm font-bold mb-2">Vincoli:</label>
-                    <textarea id="constraints" name="constraints" rows="5" class="shadow appearance-none border rounded w-full py-2 px-3 bg-white-700 text-black leading-tight focus:outline-none focus:shadow-outline" placeholder="Inserisci i tuoi vincoli, uno per riga">0.72 x + 0.23 y <= 13
-2 x + 0.2 y <= 31
-12 x + 3 y <= 230
-0.33 x + 0.28 y <= 10</textarea>
+                    <textarea id="constraints" name="constraints" rows="5" class="shadow appearance-none border rounded w-full py-2 px-3 bg-white-700 text-black leading-tight focus:outline-none focus:shadow-outline" placeholder="Inserisci i tuoi vincoli, uno per riga"></textarea>
                 </div>
-                <button onclick="risolviProblema()" class="bg-white-500 hover:bg-white-700 text-black font-bold py-2 px-4 rounded">Risolvi Problema</button>
+                <button onclick="risolviProblema()" class="bg-gray-500 hover:bg-white-800 text-white font-bold py-2 px-4 rounded">Risolvi Problema</button>
+                <button onclick="setExample()" class="bg-gray-500 hover:bg-white-800 text-white font-bold py-2 px-4 rounded mb-2">Esempio</button>
             </div>
         </div>
     </div>
+        <!-- Soluzione in formato JSON -->
+        <div class="flex items-center justify-center mt-3">
+            <div id="solution" class="max-w-4xl w-full bg-white rounded-lg shadow-md p-5 text-left text-gray-700 font-mono">
+                <!-- Qui apparirà la soluzione -->
+            </div>
+        </div>
+    
+
     <!-- Graph container -->
     <div class="flex items-center justify-center">
-        <div class="max-w-6xl w-full my-8"> <!-- Adjusted max width -->
+        <div class="max-w-6xl w-full"> <!-- Adjusted max width -->
             <canvas id="lpGraph"></canvas>
         </div>
     </div>    
     <script>
+
+        function setExample() {
+            document.getElementById('function').value = "z = 20 x + 12.5 y";
+            document.getElementById('constraints').value = "0.72 x + 0.23 y <= 13\n2 x + 0.2 y <= 31\n12 x + 3 y <= 230\n0.33 x + 0.28 y <= 10";
+        }
         function insertSymbol(symbol) {
             let functionInput = document.getElementById('function');
             insertAtCursor(functionInput, symbol);
@@ -89,8 +91,12 @@
             });
 
             var solution = solver.Solve(model);
-            //alert("La soluzione è: " + JSON.stringify(solution));
-            updateGraph(model); // Ensure this is called after solving the model
+            var keys = Object.keys(solution);
+    var secondKey = keys[1];  // Assuming 'keys[0]' is 'feasible', 'keys[1]' is 'result'
+    var secondValue = solution[secondKey];
+
+    document.getElementById('solution').innerHTML = secondValue;
+    updateGraph(model); // Ensure this is called after solving the model
         }
 
         var ctx = document.getElementById('lpGraph').getContext('2d');
