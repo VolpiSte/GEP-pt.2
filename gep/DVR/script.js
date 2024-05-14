@@ -100,7 +100,7 @@ function getDato(value, array) {
 function esportaPdf(){
     var doc = new jsPDF();
 
-    var formData = new FormData(document.querySelector('form'));
+    var formData = new FormData(document.querySelector('calcolaForm'));
     var data = {};
     for (var [key, value] of formData.entries()) {
         data[key] = value;
