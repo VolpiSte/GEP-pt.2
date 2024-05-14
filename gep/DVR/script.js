@@ -98,14 +98,34 @@ function getDato(value, array) {
 
 
 function esportaPdf(){
-     // Verifica che jsPDF sia definito e la pagina sia completamente caricata
-     if (typeof jsPDF !== 'undefined') {
-        const doc = new jsPDF();
-        const source = document.querySelector('table');
-        doc.autoTable({ html: source });
-        doc.save('tabella.pdf');
-    } else {
-        // jsPDF non è definito, gestisci l'errore o notifica l'utente
-        console.error('jsPDF non è definito. Assicurati di aver incluso correttamente la libreria.');
+    var doc = new jsPDF();
+
+    var formData = new FormData(document.querySelector('form'));
+    var data = {};
+    for (var [key, value] of formData.entries()) {
+        data[key] = value;
     }
+
+    var yPos = 30;
+    
+    var ragioneSociale = document.getElementById("ragione_sociale").value;
+    doc.setFontSize(20);
+    doc.setFontStyle("bold");
+    var centerPos = (doc.internal.pageSize.width / 2) - (doc.getStringUnitWidth(ragioneSociale) * doc.internal.getFontSize() / 2);
+    doc.text(centerPos, yPos, ragioneSociale);
+    doc.setFontSize(12);
+    doc.setFontStyle("normal");
+    yPos += 10;
+    var i = 0;
+    for (var key in data) {
+        if (data.hasOwnProperty(key) && key !== "ragione_sociale") {
+            doc.text(20, yPos, key + ': ' +valori[i++]);
+            yPos += 10;
+        }
+    }
+
+    var risultato = document.getElementById("risultato").innerHTML;
+    doc.text(20, yPos, 'Indice di Rischio: ' + risultato);
+
+    doc.save('risultato.pdf');
 }
